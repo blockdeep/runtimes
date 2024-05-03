@@ -22,9 +22,9 @@ use emulated_integration_tests_common::{
 };
 use parachains_common::Balance;
 
+pub const ASSET_HUB_PARA_ID: u32 = 1000;
 pub const PARA_ID: u32 = 1002;
-pub const ED: Balance =
-	system_parachains_constants::polkadot::currency::SYSTEM_PARA_EXISTENTIAL_DEPOSIT;
+pub const ED: Balance = bridge_hub_polkadot_runtime::ExistentialDeposit::get();
 
 pub fn genesis() -> Storage {
 	let genesis_config = bridge_hub_polkadot_runtime::RuntimeGenesisConfig {
@@ -63,6 +63,11 @@ pub fn genesis() -> Storage {
 		},
 		bridge_kusama_messages: bridge_hub_polkadot_runtime::BridgeKusamaMessagesConfig {
 			owner: Some(get_account_id_from_seed::<sr25519::Public>(accounts::BOB)),
+			..Default::default()
+		},
+		ethereum_system: bridge_hub_polkadot_runtime::EthereumSystemConfig {
+			para_id: PARA_ID.into(),
+			asset_hub_para_id: ASSET_HUB_PARA_ID.into(),
 			..Default::default()
 		},
 		..Default::default()

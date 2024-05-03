@@ -24,7 +24,6 @@ use ::pallet_bridge_relayers::WeightInfoExt as _;
 use frame_support::weights::Weight;
 
 pub mod block_weights;
-pub mod cumulus_pallet_dmp_queue;
 pub mod cumulus_pallet_parachain_system;
 pub mod cumulus_pallet_xcmp_queue;
 pub mod extrinsic_weights;
@@ -43,6 +42,10 @@ pub mod pallet_utility;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
+pub mod snowbridge_pallet_ethereum_client;
+pub mod snowbridge_pallet_inbound_queue;
+pub mod snowbridge_pallet_outbound_queue;
+pub mod snowbridge_pallet_system;
 pub mod xcm;
 
 pub use block_weights::constants::BlockExecutionWeight;

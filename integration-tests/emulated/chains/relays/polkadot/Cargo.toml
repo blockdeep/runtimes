@@ -1,6 +1,6 @@
 [package]
 name = "polkadot-emulated-chain"
-version = "1.0.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -8,24 +8,22 @@ description = "Polkadot emulated chain used for integration tests"
 publish = false
 
 [dependencies]
-serde_json = "1.0.111"
 
 # Substrate
-sp-core = { version = "28.0.0" }
-sp-runtime = { version = "31.0.1" }
-authority-discovery-primitives = { package = "sp-authority-discovery", version = "26.0.0" }
-babe-primitives = { package = "sp-consensus-babe", version = "0.32.0" }
-beefy-primitives = { package = "sp-consensus-beefy", version = "13.0.0" }
-grandpa = { package = "sc-consensus-grandpa", version = "0.19.0" }
-pallet-im-online = { version = "27.0.0" }
-pallet-staking = { version = "28.0.0" }
+sp-core = { workspace = true, default-features = true }
+sp-runtime = { workspace = true, default-features = true }
+authority-discovery-primitives = { package = "sp-authority-discovery", version = "27.0.0" }
+babe-primitives = { package = "sp-consensus-babe", version = "0.33.0" }
+beefy-primitives = { package = "sp-consensus-beefy", version = "14.0.0" }
+grandpa = { package = "sc-consensus-grandpa", version = "0.20.0" }
+pallet-staking = { workspace = true, default-features = true }
 
 # Polkadot
-polkadot-primitives = { version = "7.0.0" }
+polkadot-primitives = { workspace = true, default-features = true }
 
 # Cumulus
-parachains-common = { version = "7.0.0" }
-emulated-integration-tests-common = { version = "3.0.0" }
+parachains-common = { workspace = true, default-features = true }
+emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
 polkadot-runtime-constants = { path = "../../../../../relay/polkadot/constants" }

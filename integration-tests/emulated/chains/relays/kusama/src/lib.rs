@@ -21,7 +21,6 @@ use emulated_integration_tests_common::{
 	impl_hrmp_channels_helpers_for_relay_chain, impl_send_transact_helpers_for_relay_chain,
 	xcm_emulator::decl_test_relay_chains,
 };
-use polkadot_primitives::runtime_api::runtime_decl_for_parachain_host::ParachainHostV9;
 
 // Kusama declaration
 decl_test_relay_chains! {
@@ -38,6 +37,9 @@ decl_test_relay_chains! {
 			Balances: kusama_runtime::Balances,
 			Hrmp: kusama_runtime::Hrmp,
 			Identity: kusama_runtime::Identity,
+			IdentityMigrator: kusama_runtime::IdentityMigrator,
+			Treasury: kusama_runtime::Treasury,
+			AssetRate: kusama_runtime::AssetRate,
 		}
 	},
 }

@@ -58,7 +58,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::{pay::PayFromAccount, ConversionFromAssetBalance, ConversionToAssetBalance},
-		ConstBool, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter,
+		ConstBool, ConstU64, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -100,10 +100,7 @@ use system_parachains_constants::{
 	SLOT_DURATION,
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
-use xcm::{
-	latest::{BodyId, InteriorMultiLocation, Junction::PalletInstance},
-	v3::AssetId as XcmAssetId,
-};
+use xcm::latest::prelude::{AssetId as XcmAssetId, BodyId};
 
 use xcm_config::{KsmLocation, XcmOriginToTransactDispatchOrigin};
 
@@ -125,7 +122,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("encointer-parachain"),
 	impl_name: create_runtime_str!("encointer-parachain"),
 	authoring_version: 1,
-	spec_version: 1_001_000,
+	spec_version: 1_002_000,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 3,
@@ -310,13 +307,12 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10, same as statemine
-	pub const TransactionByteFee: Balance = MILLICENTS;
+	pub const TransactionByteFee: Balance = system_parachains_constants::kusama::fee::TRANSACTION_BYTE_FEE;
 	pub const OperationalFeeMultiplier: u8 = 5;
 }
 
@@ -341,9 +337,6 @@ parameter_types! {
 	pub const Burn: Permill = Permill::from_percent(1);
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
-	// The asset's interior location for the paying account. This is the Treasury
-	// pallet instance (which sits at index 18).
-	pub TreasuryInteriorLocation: InteriorMultiLocation = PalletInstance(ENCOINTER_TREASURY_PALLET_ID).into();
 	pub const MaxApprovals: u32 = 10;
 	pub TreasuryAccount: AccountId = Treasury::account_id();
 }
@@ -428,14 +421,16 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
-	type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
-		Runtime,
-		RELAY_CHAIN_SLOT_DURATION_MILLIS,
-		BLOCK_PROCESSING_VELOCITY,
-		UNINCLUDED_SEGMENT_CAPACITY,
-	>;
+	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 }
+
+type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
+	Runtime,
+	RELAY_CHAIN_SLOT_DURATION_MILLIS,
+	BLOCK_PROCESSING_VELOCITY,
+	UNINCLUDED_SEGMENT_CAPACITY,
+>;
 
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
@@ -446,7 +441,7 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 parameter_types! {
 	pub const ExecutiveBody: BodyId = BodyId::Executive;
 	/// The asset ID for the asset that we use to pay for message delivery fees.
-	pub FeeAssetId: XcmAssetId = XcmAssetId::Concrete(xcm_config::KsmLocation::get());
+	pub FeeAssetId: XcmAssetId = XcmAssetId(xcm_config::KsmLocation::get());
 	/// The base fee for the message delivery fees.
 	pub const ToSiblingBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
 	pub const ToParentBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
@@ -472,13 +467,6 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
 	type PriceForSiblingDelivery = PriceForSiblingParachainDelivery;
-}
-
-// TODO: remove dmp with 1.3.0 (https://github.com/polkadot-fellows/runtimes/issues/186)
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
-	type DmpSink = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 }
 
 parameter_types! {
@@ -517,7 +505,7 @@ parameter_types! {
 	pub const MomentsPerDay: Moment = 86_400_000; // [ms/d]
 	pub const DefaultDemurrage: Demurrage = Demurrage::from_bits(0x0000000000000000000001E3F0A8A973_i128);
 	pub const EncointerExistentialDeposit: BalanceType = BalanceType::from_bits(0x0000000000000000000053e2d6238da4_u128);
-	pub const MeetupSizeTarget: u64 = 10;
+	pub const MeetupSizeTarget: u64 = 15;
 	pub const MeetupMinSize: u64 = 3;
 	pub const MeetupNewbieLimitDivider: u64 = 2; // 2 means 1/3 of participants may be newbies
 	pub const FaucetPalletId: PalletId = PalletId(*b"ectrfct0");
@@ -586,7 +574,6 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = MaxAuthorities;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
-	#[cfg(feature = "experimental")]
 	type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
@@ -661,8 +648,7 @@ construct_runtime! {
 		XcmpQueue: cumulus_pallet_xcmp_queue = 30,
 		PolkadotXcm: pallet_xcm = 31,
 		CumulusXcm: cumulus_pallet_xcm = 32,
-		// TODO: remove dmp with 1.3.0 (https://github.com/polkadot-fellows/runtimes/issues/186)
-		DmpQueue: cumulus_pallet_dmp_queue = 33,
+		// DmpQueue: cumulus_pallet_dmp_queue = 33, removed
 		MessageQueue: pallet_message_queue = 35,
 
 		// Handy utilities.
@@ -710,14 +696,13 @@ pub type UncheckedExtrinsic =
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub DmpQueueName: &'static str = "DmpQueue";
+}
+
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
-	// fixing the scheduler with a local migration is necessary because we have missed intermediate
-	// migrations. the safest migration is, therefore, to clear all storage and bump StorageVersion
-	migrations_fix::scheduler::v4::MigrateToV4<Runtime>,
-	// also here we're actually too late with applying the migration. however, the migration does
-	// work as-is.
-	pallet_xcm::migration::v1::VersionUncheckedMigrateToV1<Runtime>,
+	frame_support::migrations::RemovePallet<DmpQueueName, RocksDbWeight>,
 	// balances are more tricky. We missed to do the migration to V1 and now we have inconsistent
 	// state which can't be decoded to V0, yet the StorageVersion is V0.
 	// the strategy is to: just pretend we're on V1
@@ -726,7 +711,8 @@ pub type Migrations = (
 	pallet_balances::migration::ResetInactive<Runtime>,
 	//then apply the proper migration as we should have done earlier
 	pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
-	cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+	// permanent
+	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
@@ -759,7 +745,6 @@ mod benches {
 		[pallet_encointer_faucet, EncointerFaucet]
 		[pallet_encointer_reputation_commitments, EncointerReputationCommitments]
 		[pallet_encointer_scheduler, EncointerScheduler]
-		[cumulus_pallet_dmp_queue, DmpQueue]
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
 	);
@@ -773,6 +758,15 @@ impl_runtime_apis! {
 
 		fn authorities() -> Vec<AuraId> {
 			Aura::authorities().into_inner()
+		}
+	}
+
+	impl cumulus_primitives_aura::AuraUnincludedSegmentApi<Block> for Runtime {
+		fn can_build_upon(
+			included_hash: <Block as BlockT>::Hash,
+			slot: cumulus_primitives_aura::Slot,
+		) -> bool {
+			ConsensusHook::can_build_upon(included_hash, slot)
 		}
 	}
 
@@ -1117,6 +1111,10 @@ fn test_constants_compatiblity() {
 		system_parachains_constants::kusama::currency::system_para_deposit(5, 3)
 	);
 	assert_eq!(
+		::system_parachains_constants::kusama::fee::TRANSACTION_BYTE_FEE,
+		system_parachains_constants::kusama::fee::TRANSACTION_BYTE_FEE
+	);
+	assert_eq!(
 		::system_parachains_constants::kusama::fee::calculate_weight_to_fee(
 			&::system_parachains_constants::MAXIMUM_BLOCK_WEIGHT
 		),
@@ -1124,6 +1122,13 @@ fn test_constants_compatiblity() {
 			&system_parachains_constants::MAXIMUM_BLOCK_WEIGHT
 		)
 	);
+}
+
+#[test]
+fn test_transasction_byte_fee_is_one_tenth_of_relay() {
+	let relay_tbf = ::kusama_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	let parachain_tbf = TransactionByteFee::get();
+	assert_eq!(relay_tbf / 10, parachain_tbf);
 }
 
 // The Encointer pallets do not have compatible versions with `polkadot-sdk`, making it difficult
@@ -1208,6 +1213,11 @@ mod system_parachains_constants {
 			use polkadot_core_primitives::Balance;
 			use smallvec::smallvec;
 			pub use sp_runtime::Perbill;
+
+			/// Cost of every transaction byte at Kusama system parachains.
+			///
+			/// It is the Relay Chain (Kusama) `TransactionByteFee` / 10.
+			pub const TRANSACTION_BYTE_FEE: Balance = super::currency::MILLICENTS;
 
 			/// Handles converting a weight scalar to a fee value, based on the scale and
 			/// granularity of the node's balance type.
