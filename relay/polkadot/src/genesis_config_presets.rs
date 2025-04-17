@@ -146,7 +146,7 @@ fn polkadot_testnet_genesis(
 		AuthorityDiscoveryId,
 		BeefyId,
 	)>,
-	_root_key: AccountId,
+	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
@@ -194,6 +194,9 @@ fn polkadot_testnet_genesis(
 		"configuration": {
 			"config": default_parachains_host_configuration(),
 		},
+		"sudo": {
+			"key": root_key,
+		}
 	})
 }
 
